@@ -1,0 +1,307 @@
+version: '3.8'
+
+networks:
+  homelab:
+    external: true
+  vpn:
+    external: true
+
+services:
+  # === VPN SERVICES ===
+  
+  # Gluetun VPN Client
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    networks:
+      - vpn
+    ports:
+      # qBittorrent
+      - "8081:8080"
+      # Prowlarr
+      - "9696:9696"
+      # VPN Health Check
+      - "8888:8888"
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${NORDVPN_USER}
+      - OPENVPN_PASSWORD=${NORDVPN_PASS}
+      - SERVER_COUNTRIES=${VPN_COUNTRY}
+      - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24
+      - HEALTH_VPN_DURATION_INITIAL=30s
+	  
+      - HEALTH_TARGET_ADDRESS=1.1.1.1:443
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/gluetun:/gluetun
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # AdGuard Home DNS Server
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: adguard
+    restart: unless-stopped
+    networks:
+      homelab:
+        ipv4_address: 172.20.0.15
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "68:68/tcp"
+      - "68:68/udp"
+      - "3000:3000/tcp"
+    volumes:
+      - ${CONFIG_ROOT}/adguard/work:/opt/adguardhome/work
+      - ${CONFIG_ROOT}/adguard/conf:/opt/adguardhome/conf
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.adguard.rule=Host("dns.${DOMAIN}")'
+      - "traefik.http.routers.adguard.tls=true"
+      - "traefik.http.routers.adguard.tls.certresolver=cloudflare"
+      - "traefik.http.services.adguard.loadbalancer.server.port=3000"
+
+  # WireGuard VPN Server
+  wireguard:
+    image: linuxserver/wireguard:latest
+    container_name: wireguard
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - homelab
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SERVERURL=${DOMAIN}
+      - SERVERPORT=51820
+      - PEERS=5
+      - PEERDNS=172.20.0.15
+      - INTERNAL_SUBNET=10.13.13.0
+      - ALLOWEDIPS=0.0.0.0/0
+    volumes:
+      - ${CONFIG_ROOT}/wireguard:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+	  
+	  # === MEDIA SERVICES ===
+  
+  # Plex Media Server
+  plex:
+    image: plexinc/pms-docker:latest
+    container_name: plex
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - TZ=${TZ}
+      - PLEX_CLAIM=your-plex-claim-token
+      - PLEX_UID=${PUID}
+      - PLEX_GID=${PGID}
+      - ADVERTISE_IP=https://plex.${DOMAIN}
+    volumes:
+      - ${CONFIG_ROOT}/plex:/config
+      - /tmp/plex-transcode:/transcode
+      - ${MOVIES_PATH}:/movies:ro
+      - ${TV_PATH}:/tv:ro
+      - ${MUSIC_PATH}:/music:ro
+    ports:
+      - "32400:32400"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.plex.rule=Host("plex.${DOMAIN}")'
+      - "traefik.http.routers.plex.tls=true"
+      - "traefik.http.routers.plex.tls.certresolver=cloudflare"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
+
+  # Jellyfin Media Server (Alternative)
+  jellyfin:
+    image: linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/jellyfin:/config
+      - ${MOVIES_PATH}:/movies:ro
+      - ${TV_PATH}:/tv:ro
+      - ${MUSIC_PATH}:/music:ro
+    ports:
+      - "8096:8096"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.jellyfin.rule=Host("jellyfin.${DOMAIN}")'
+      - "traefik.http.routers.jellyfin.tls=true"
+      - "traefik.http.routers.jellyfin.tls.certresolver=cloudflare"
+      - "traefik.http.services.jellyfin.loadbalancer.server.port=8096"
+
+  # qBittorrent (via VPN)
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+	depends_on:
+      - gluetun
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${CONFIG_ROOT}/qbittorrent:/config
+      - ${DOWNLOADS_ROOT}:/downloads
+
+  # Sonarr TV Show Management
+  sonarr:
+    image: linuxserver/sonarr:latest
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      - homelab
+      - vpn
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/sonarr:/config
+      - ${TV_PATH}:/tv
+      - ${DOWNLOADS_ROOT}:/downloads
+    ports:
+      - "8989:8989"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.sonarr.rule=Host("sonarr.${DOMAIN}")'
+      - "traefik.http.routers.sonarr.tls=true"
+      - "traefik.http.routers.sonarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+
+  # Radarr Movie Management
+  radarr:
+    image: linuxserver/radarr:latest
+    container_name: radarr
+    restart: unless-stopped
+    networks:
+      - homelab
+      - vpn
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/radarr:/config
+      - ${MOVIES_PATH}:/movies
+      - ${DOWNLOADS_ROOT}:/downloads
+    ports:
+      - "7878:7878"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.radarr.rule=Host("radarr.${DOMAIN}")'
+      - "traefik.http.routers.radarr.tls=true"
+      - "traefik.http.routers.radarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+
+  # Lidarr Music Management
+  lidarr:
+    image: linuxserver/lidarr:latest
+    container_name: lidarr
+    restart: unless-stopped
+    networks:
+      - homelab
+      - vpn
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/lidarr:/config
+      - ${MUSIC_PATH}:/music
+      - ${DOWNLOADS_ROOT}:/downloads
+    ports:
+      - "8686:8686"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.lidarr.rule=Host("lidarr.${DOMAIN}")'
+      - "traefik.http.routers.lidarr.tls=true"
+      - "traefik.http.routers.lidarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.lidarr.loadbalancer.server.port=8686"
+
+  # Prowlarr Indexer Management (via VPN)
+  prowlarr:
+    image: linuxserver/prowlarr:latest
+    container_name: prowlarr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+	depends_on:
+      - gluetun
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/prowlarr:/config
+
+  # Bazarr Subtitle Management
+  bazarr:
+    image: linuxserver/bazarr:latest
+    container_name: bazarr
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/bazarr:/config
+      - ${MOVIES_PATH}:/movies
+      - ${TV_PATH}:/tv
+    ports:
+      - "6767:6767"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.bazarr.rule=Host("bazarr.${DOMAIN}")'
+      - "traefik.http.routers.bazarr.tls=true"
+      - "traefik.http.routers.bazarr.tls.certresolver=cloudflare"
+      - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
+
+  # Overseerr Request Management
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - LOG_LEVEL=info
+      - TZ=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/overseerr:/app/config
+    ports:
+      - "5055:5055"
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.overseerr.rule=Host("requests.${DOMAIN}")'
+      - "traefik.http.routers.overseerr.tls=true"
+      - "traefik.http.routers.overseerr.tls.certresolver=cloudflare"
+      - "traefik.http.services.overseerr.loadbalancer.server.port=5055"
