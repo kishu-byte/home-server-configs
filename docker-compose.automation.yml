@@ -1,0 +1,152 @@
+version: '3.8'
+
+networks:
+  homelab:
+    external: true
+
+services:
+  # === AUTOMATION SERVICES ===
+  
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${NEXTCLOUD_ADMIN_PASS}
+      - N8N_HOST=${DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_TUNNEL_URL=https://n8n.${DOMAIN}
+      - GENERIC_TIMEZONE=${TZ}
+    volumes:
+      - ${CONFIG_ROOT}/n8n:/home/node/.n8n
+    ports:
+      - "5678:5678"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(\`n8n.${DOMAIN}\`)"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.routers.n8n.tls.certresolver=cloudflare"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+  # Nextcloud Home Cloud
+  nextcloud-db:
+    image: mariadb:lts
+    container_name: nextcloud-db
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=${DB_USER}
+    volumes:
+      - ${CONFIG_ROOT}/nextcloud/db:/var/lib/mysql
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW --innodb-file-per-table=1 --skip-innodb-read-only-compressed
+
+  nextcloud-redis:
+    image: redis:alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    networks:
+      - homelab
+
+  nextcloud:
+    image: nextcloud:latest
+    container_name: nextcloud
+    restart: unless-stopped
+    networks:
+      - homelab
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    environment:
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_HOST=nextcloud-db
+      - REDIS_HOST=nextcloud-redis
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASS}
+      - NEXTCLOUD_TRUSTED_DOMAINS=nextcloud.${DOMAIN}
+      - OVERWRITEPROTOCOL=https
+      - OVERWRITEHOST=nextcloud.${DOMAIN}
+    volumes:
+      - ${CONFIG_ROOT}/nextcloud/app:/var/www/html
+      - ${DATA_ROOT}/nextcloud:/var/www/html/data
+    ports:
+      - "8081:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud.rule=Host(\`cloud.${DOMAIN}\`)"
+      - "traefik.http.routers.nextcloud.tls=true"
+      - "traefik.http.routers.nextcloud.tls.certresolver=cloudflare"
+      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+
+  # BookStack Wiki
+  bookstack-db:
+    image: mariadb:lts
+    container_name: bookstack-db
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=bookstack
+      - MYSQL_USER=${DB_USER}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ${CONFIG_ROOT}/bookstack/db:/var/lib/mysql
+
+  bookstack:
+    image: linuxserver/bookstack:latest
+    container_name: bookstack
+    restart: unless-stopped
+    networks:
+      - homelab
+    depends_on:
+      - bookstack-db
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - APP_URL=https://wiki.${DOMAIN}
+      - DB_HOST=bookstack-db
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASSWORD}
+      - DB_DATABASE=bookstack
+      - APP_KEY=${BOOKSTACK_APP_KEY}
+    volumes:
+      - ${CONFIG_ROOT}/bookstack/app:/config
+    ports:
+      - "6875:80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bookstack.rule=Host(\`wiki.${DOMAIN}\`)"
+      - "traefik.http.routers.bookstack.tls=true"
+      - "traefik.http.routers.bookstack.tls.certresolver=cloudflare"
+      - "traefik.http.services.bookstack.loadbalancer.server.port=80"
+
+  # Telegram Bot Integration
+  telegram-bot:
+    image: python:3.9-slim
+    container_name: telegram-bot
+    restart: unless-stopped
+    networks:
+      - homelab
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - HOMELAB_URL=https://${DOMAIN}
+    volumes:
+      - ${CONFIG_ROOT}/telegram:/app
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    working_dir: /app
+    command: python bot.py
