@@ -65,7 +65,7 @@ services:
       - ${CONFIG_ROOT}/adguard/conf:/opt/adguardhome/conf
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adguard.rule=Host(\`dns.${DOMAIN}\`)"
+      - 'traefik.http.routers.adguard.rule=Host("dns.${DOMAIN}")'
       - "traefik.http.routers.adguard.tls=true"
       - "traefik.http.routers.adguard.tls.certresolver=cloudflare"
       - "traefik.http.services.adguard.loadbalancer.server.port=3000"
