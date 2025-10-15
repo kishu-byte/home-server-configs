@@ -1,0 +1,55 @@
+- Media:
+    - Plex:
+        href: https://plex.${DOMAIN}
+        icon: plex.png
+        description: Media Server
+        widget:
+          type: plex
+          url: http://plex:32400
+          key: your_plex_token
+
+    - Overseerr:
+        href: https://requests.${DOMAIN}
+        icon: overseerr.png
+        description: Media Requests
+
+- Management:
+    - Sonarr:
+        href: https://sonarr.${DOMAIN}
+        icon: sonarr.png
+        description: TV Shows
+        widget:
+          type: sonarr
+          url: http://sonarr:8989
+          key: your_sonarr_api_key
+
+    - Radarr:
+        href: https://radarr.${DOMAIN}
+        icon: radarr.png
+        description: Movies
+        widget:
+          type: radarr
+          url: http://radarr:7878
+          key: your_radarr_api_key
+
+- Tools:
+    - Portainer:
+        href: https://portainer.${DOMAIN}
+        icon: portainer.png
+        description: Container Management
+
+    - n8n:
+        href: https://n8n.${DOMAIN}
+        icon: n8n.png
+        description: Workflow Automation
+
+- Cloud:
+    - Nextcloud:
+        href: https://cloud.${DOMAIN}
+        icon: nextcloud.png
+        description: Personal Cloud
+
+    - BookStack:
+        href: https://wiki.${DOMAIN}
+        icon: bookstack.png
+        description: Documentation Wiki
