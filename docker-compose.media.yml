@@ -68,8 +68,6 @@ services:
     container_name: qbittorrent
     restart: unless-stopped
     network_mode: "service:gluetun"
-    depends_on:
-      - gluetun
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -160,8 +158,6 @@ services:
     container_name: prowlarr
     restart: unless-stopped
     network_mode: "service:gluetun"
-    depends_on:
-      - gluetun
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
