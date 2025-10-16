@@ -1,0 +1,24 @@
+2025-10-15 11:21:31|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 11:21:33|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 11:21:33|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 11:21:33|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-10-15 11:23:06|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 11:23:07|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 11:23:07|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 11:23:07|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-10-15 11:28:16|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 11:28:18|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 11:28:18|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 11:28:18|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-10-15 12:19:51|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 12:19:52|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 12:19:52|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 12:19:52|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-10-15 15:34:40|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 15:34:41|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 15:34:41|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 15:34:41|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|
+2025-10-15 17:02:11|INFO    |root                            |Scheduler will use this timezone: America/Los_Angeles|
+2025-10-15 17:02:13|INFO    |root                            |Interactive jobs queue started and waiting for tasks|
+2025-10-15 17:02:13|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://***.***.***.***:6767|
+2025-10-15 17:02:13|INFO    |waitress                        |BAZARR is started and waiting for requests on: http://[::]:6767|

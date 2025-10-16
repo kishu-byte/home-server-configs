@@ -8,7 +8,7 @@ networks:
 
 services:
   # === VPN SERVICES ===
-  
+
   # Gluetun VPN Client
   gluetun:
     image: qmcgaw/gluetun:latest
@@ -35,7 +35,6 @@ services:
       - SERVER_COUNTRIES=${VPN_COUNTRY}
       - FIREWALL_OUTBOUND_SUBNETS=192.168.1.0/24
       - HEALTH_VPN_DURATION_INITIAL=30s
-	  
       - HEALTH_TARGET_ADDRESS=1.1.1.1:443
       - TZ=${TZ}
     volumes:
@@ -98,9 +97,32 @@ services:
       - "51820:51820/udp"
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
-	  
-	  # === MEDIA SERVICES ===
-  
+
+
+  # FlareSolverr for Cloudfare Access
+  flaresolverr:
+    image: flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      - LOG_LEVEL=info
+
+
+  # Cloudfare for Dynamic Public IP update
+  cloudflare-ddns:
+    image: oznu/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      - API_KEY=${CF_API_TOKEN}
+      - ZONE=${DOMAIN}
+      - SUBDOMAIN=homelab
+      - PROXIED=true
+
+  # === MEDIA SERVICES === 
   # Plex Media Server
   plex:
     image: plexinc/pms-docker:latest
@@ -110,7 +132,7 @@ services:
       - homelab
     environment:
       - TZ=${TZ}
-      - PLEX_CLAIM=your-plex-claim-token
+      - PLEX_CLAIM=claim-BxAxZsXWFxyPJD71UH7s
       - PLEX_UID=${PUID}
       - PLEX_GID=${PGID}
       - ADVERTISE_IP=https://plex.${DOMAIN}
@@ -159,8 +181,10 @@ services:
     image: linuxserver/qbittorrent:latest
     container_name: qbittorrent
     restart: unless-stopped
+#    ports:
+#      - "8090:8080"
     network_mode: "service:gluetun"
-	depends_on:
+    depends_on:
       - gluetun
     environment:
       - PUID=${PUID}
@@ -252,7 +276,7 @@ services:
     container_name: prowlarr
     restart: unless-stopped
     network_mode: "service:gluetun"
-	depends_on:
+    depends_on:
       - gluetun
     environment:
       - PUID=${PUID}

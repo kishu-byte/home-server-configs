@@ -45,7 +45,7 @@ services:
       - ${CONFIG_ROOT}/grafana:/etc/grafana
       - grafana_data:/var/lib/grafana
     ports:
-      - "3001:3000"
+      - "3002:3000"
     labels:
       - "traefik.enable=true"
       - 'traefik.http.routers.grafana.rule=Host("grafana.${DOMAIN}")'

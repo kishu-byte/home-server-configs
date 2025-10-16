@@ -6,7 +6,7 @@ networks:
 
 services:
   # === AUTOMATION SERVICES ===
-  
+
   # n8n Workflow Automation
   n8n:
     image: n8nio/n8n:latest
@@ -82,7 +82,7 @@ services:
       - ${CONFIG_ROOT}/nextcloud/app:/var/www/html
       - ${DATA_ROOT}/nextcloud:/var/www/html/data
     ports:
-      - "8081:80"
+      - "8082:80"
     labels:
       - "traefik.enable=true"
       - 'traefik.http.routers.nextcloud.rule=Host("cloud.${DOMAIN}")'

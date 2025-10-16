@@ -1,0 +1,21 @@
+OC.L10N.register(
+    "photos",
+    {
+    "Videos" : "Tividyutin",
+    "People" : "Imdanen",
+    "Folders" : "Ikaramen",
+    "Favorites" : "Imenyafen",
+    "Tags" : "Tibzimin",
+    "Back" : "Retour",
+    "Save" : "Sekles",
+    "Favorite" : "Menyif",
+    "Go back" : "Tuɣalin",
+    "All folders" : "Akk ikaramen",
+    "Home" : "Asnubeg",
+    "Remove from favorites" : "Kkes-it seg ismal",
+    "Details" : "Talqayt",
+    "Group" : "Agraw",
+    "Back to {folder}" : "Uɣal ar {folder}",
+    "Add" : "Rnu"
+},
+"nplurals=2; plural=(n != 1);");

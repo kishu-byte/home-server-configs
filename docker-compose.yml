@@ -3,23 +3,17 @@ version: '3.8'
 networks:
   homelab:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/24
+    external: true
   vpn:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.21.0.0/24
+    external: true
   mgmt:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.22.0.0/24
+    external: true
 
 services:
   # === CORE INFRASTRUCTURE ===
-  
+
   # Traefik Reverse Proxy
   traefik:
     image: traefik:v3.0
@@ -91,10 +85,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - "traefik.enable=true"
-      - 'traefik.http.routers.homepage.rule=Host("home.${DOMAIN}")'
+      - 'traefik.http.routers.homepage.rule=Host("homelab.${DOMAIN}")'
       - "traefik.http.routers.homepage.tls=true"
       - "traefik.http.routers.homepage.tls.certresolver=cloudflare"
-      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3050"
 
 volumes:
   portainer_data:
